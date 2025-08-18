@@ -7,8 +7,9 @@ if __name__ == "__main__":
     
     # Download zoning code for RAG
     base_dir = Path(__file__).parent.parent 
-    print(base_dir)
     local_file_dir = base_dir / "temp" 
+    local_file_dir.mkdir(exist_ok=True)
+    
     emb.download_from_s3(s3_path="Minneapolis_MN_Code_of_Ordinances.pdf", output_path=local_file_dir)
     
     # Define document chunk size and overlap
