@@ -28,9 +28,13 @@ def get_inference_profile_arn(model):
         print(f"Error accessing inference profiles using Bedrock client: {e}")
         return 
     
-    inf_profile = next( ele['inferenceProfileArn'] 
-                       for ele in response['inferenceProfileSummaries'] 
-                       if ele['inferenceProfileName'] == model)
+    inf_profile = next( 
+        (
+            ele['inferenceProfileArn'] 
+            for ele in response['inferenceProfileSummaries'] 
+            if ele['inferenceProfileName'] == model), 
+        None
+    )
     
     return inf_profile
 
@@ -115,6 +119,12 @@ def run_conversation(model, q_type, emb_vs, folder_path, k=3, n_iter=3):
     # Get the model's inference profile
     inf_profile = get_inference_profile_arn(model)
 
+    # Choose model id based on if inference profile is required or not
+    if inf_profile is None:
+        model_id = model
+    else:
+        model_id = inf_profile
+
     # Get user questions and respective context
     queries = get_user_queries_with_context(q_type, emb_vs, k)
     
@@ -131,6 +141,8 @@ def run_conversation(model, q_type, emb_vs, folder_path, k=3, n_iter=3):
         # Clear response and update iteration for current run
         queries['response'] = None
         queries['iteration'] = i+1
+
+        print(f"Conversation iteration {i+1}")
         # Clear messages for current iteration
         messages = []
         
@@ -145,7 +157,7 @@ def run_conversation(model, q_type, emb_vs, folder_path, k=3, n_iter=3):
             
             try: 
                 # Get model response for current message using Converse API
-                response = generate_conversation(bedrock_client, inf_profile, messages, system_prompt)
+                response = generate_conversation(bedrock_client, model_id, messages, system_prompt)
             except Exception as e:
                 print(f"Error occurred while generating conversation with Converse API: {e}")
                 return
