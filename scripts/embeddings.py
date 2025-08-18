@@ -7,6 +7,9 @@ from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain_huggingface import HuggingFaceEmbeddings
 from pathlib import Path
 import os 
+import shutil
+from botocore.exceptions import ClientError
+from tqdm import tqdm 
 
 S3_BUCKET_NAME = "local-gov-ai-llm-benchmarking"
 
@@ -99,61 +102,70 @@ def get_huggingface_embedding_model(model):
     )
 
 
-def generate_embeddings_and_store(file_path, 
-                                  model, splitter_type='recursive', 
-                                  chunk_size=2000, chunk_overlap=300, ):
+def generate_embeddings_and_store(rag_file_path,
+                                  local_dir,
+                                  model, 
+                                  splitter_type='recursive', 
+                                  chunk_size=2000, 
+                                  chunk_overlap=300):
 
     # Partition the PDF document based on the specified splitter type
-    if splitter_type == 'recursive':
-        docs = recursive_splitter(file_path, chunk_size, chunk_overlap)
-    elif splitter_type == 'unstruct_basic':
-        docs = unstructured_basic_splitter(file_path, chunk_size, chunk_overlap)
-    elif splitter_type == 'unstruct_by_title':
-        docs = unstructured_by_title_splitter(file_path, chunk_size)
-    else:
-        raise ValueError("Invalid splitter type. Choose from 'recursive', 'unstruct_basic', or 'unstruct_by_title'.")
-    
+    with tqdm(total=1, desc = f"Splitting documents with {splitter_type} splitter") as pbar:
+        if splitter_type == 'recursive':
+            docs = recursive_splitter(rag_file_path, chunk_size, chunk_overlap)
+        elif splitter_type == 'unstruct_basic':
+            docs = unstructured_basic_splitter(rag_file_path, chunk_size, chunk_overlap)
+        elif splitter_type == 'unstruct_by_title':
+            docs = unstructured_by_title_splitter(rag_file_path, chunk_size)
+        else:
+            raise ValueError("Invalid splitter type. Choose from 'recursive', 'unstruct_basic', or 'unstruct_by_title'.")
+        pbar.update(1)
+        
     # Get the HuggingFace embedding model
     embedding_model = get_huggingface_embedding_model(model)
     
-    # Create vector store
+    # Create embedding vector store
     knowledge_vector_db = FAISS.from_documents(
-        docs, embedding_model, distance_strategy=DistanceStrategy.COSINE
+        tqdm(docs, desc="Embedding documents"), 
+        embedding_model, 
+        distance_strategy=DistanceStrategy.COSINE
     )
 
     # Save vector store locally
-    base_dir = Path(__file__).parent.parent 
-    save_vs_path = base_dir / "data" / "vector_stores" / model / splitter_type
+    save_vs_path = local_dir / "vector_stores" / model.replace("/", "-") / splitter_type
     knowledge_vector_db.save_local(str(save_vs_path))
 
     # Save vector store to S3
-    upload_to_s3(save_vs_path)
+    s3_path = f"vector_stores/{model.replace('/', '-')}/{splitter_type}"
+    upload_to_s3(save_vs_path, s3_path)
 
     # Remove local vector store after upload
     try:
-        os.rmdir(save_vs_path)
+        shutil.rmtree(save_vs_path)
     except OSError as e:
         print(f"Error deleting directory: {e}")
 
 
-def upload_to_s3(local_path):
+def upload_to_s3(local_folder, s3_path):
     
     try:
         s3 = boto3.client('s3')
-    except Exception as e:
+    except ClientError as e:
         print(f"Error creating S3 client: {e}")
         return
     
-    # Compute S3 path 
-    parts = Path(local_path).parts
-    s3_path = Path(*parts[2:])
-    
-    # Upload to S3
-    try:
-        s3.upload_file(local_path, S3_BUCKET_NAME, s3_path)
-        print(f"Uploaded vector store from {local_path} to s3://{S3_BUCKET_NAME}/{s3_path}")
-    except Exception as e:
-        raise(f"Error uploading to S3: {e}")
+    for root, dirs, files in os.walk(local_folder):
+        # Get all local files
+        for file in files:
+            local_path = os.path.join(root, file)
+            s3_path = os.path.join(s3_path, file)
+        
+            try:
+                # Upload to S3
+                s3.upload_file(local_path, S3_BUCKET_NAME, s3_path)
+                print(f"Uploaded file from {local_path} to s3://{S3_BUCKET_NAME}/{s3_path}")
+            except ClientError as e:
+                print(f"Error uploading to S3: {e}")
 
 
 def load_embedding_vector_store(model, splitter_type):
@@ -166,22 +178,75 @@ def load_embedding_vector_store(model, splitter_type):
     
     try:
         s3 = boto3.client('s3')
-    except Exception as e:
+        response = s3.list_objects_v2(Bucket=S3_BUCKET_NAME)
+    except ClientError as e:
+        print(f"Error creating S3 client: {e}")
+        return 
+    
+    # Get local path for the vector store 
+    local_path, dir_exists = get_local_dir(model, splitter_type)
+    
+    # Get S3 keys for vector stores
+    s3_keys = [
+        ele['Key'] for ele in response['Contents']
+        if f"vector_stores/{model.replace('/', '-')}/{splitter_type}/" in ele['Key']
+    ]
+
+    # Download from S3
+    if not dir_exists:
+        for key in s3_keys:
+    
+            # Skip directory key
+            if key.endswith('/'):
+                continue
+    
+            # Extract file name
+            file_name = os.path.basename(key)
+            
+            try:
+                s3.download_file(S3_BUCKET_NAME, key, f"{local_path}/{file_name}")
+                print(f"Saved file from s3://{S3_BUCKET_NAME}/key at {local_path}/{file_name}.")
+            except ClientError as e:
+                print(f"Error downloading from S3: {e}")
+                return 
+            
+    return FAISS.load_local(local_path, 
+                            get_huggingface_embedding_model(model), 
+                            allow_dangerous_deserialization=True)
+
+def get_local_dir(model, splitter_type):
+
+    # Create local path to save vector store 
+    try:
+        base_dir = Path(__file__).parent.parent
+    except NameError:
+        base_dir = Path.cwd().parent 
+
+    local_path = base_dir / "temp" / "vector_stores" / model.replace('/', '-') / splitter_type
+
+    # Check if directory exists and is not empty
+    if (local_path.is_dir()) & (any(local_path.iterdir())):
+        print("Loading locally available vector store.")
+        return (local_path, True)
+    else:
+        # Create directory for vector store if it doesn't exist
+        local_path.mkdir(exist_ok=True)
+        return (local_path, False)
+
+def download_from_s3(s3_path, output_path):
+
+    # Extract file name
+    file_name = os.path.basename(s3_path)
+
+    try:
+        s3 = boto3.client('s3')
+    except ClientError as e:
         print(f"Error creating S3 client: {e}")
         return
-    
-    # Define local path to save vector store and S3 path for retrieval
-    base_dir = Path(__file__).parent.parent 
-    local_path = base_dir / "data" / "vector_stores" / model / splitter_type
-    s3_path = f"vector_stores/{model}/{splitter_type}"
-    
-    # Download from S3
+
     try:
-        s3.download_file(S3_BUCKET_NAME, s3_path, str(local_path))
-        print(f"Loaded vector store from s3://{S3_BUCKET_NAME}/{s3_path} at {local_path}.")
-    except Exception as e:
-        raise(f"Error downloading from S3: {e}")
+        s3.download_file(S3_BUCKET_NAME, s3_path, f"{output_path}/{file_name}")
+        print(f"Saved file from s3://{S3_BUCKET_NAME}/{s3_path} at {output_path}.")
+    except ClientError as e:
+        print(f"Error downloading from S3: {e}")
         
-    return FAISS.load_local(str(local_path), 
-                            HuggingFaceEmbeddings(), 
-                            allow_dangerous_deserialization=True)
