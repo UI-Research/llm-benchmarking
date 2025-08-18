@@ -225,12 +225,12 @@ def get_local_dir(model, splitter_type):
     local_path = base_dir / "temp" / "vector_stores" / model.replace('/', '-') / splitter_type
 
     # Check if directory exists and is not empty
-    if (local_path.is_dir()) & (any(local_path.iterdir())):
+    if local_path.is_dir() and any(local_path.iterdir()):
         print("Loading locally available vector store.")
         return (local_path, True)
     else:
         # Create directory for vector store if it doesn't exist
-        local_path.mkdir(exist_ok=True)
+        local_path.mkdir(parents=True, exist_ok=True)
         return (local_path, False)
 
 def download_from_s3(s3_path, output_path):
