@@ -158,11 +158,11 @@ def upload_to_s3(local_folder, s3_path):
         # Get all local files
         for file in files:
             local_path = os.path.join(root, file)
-            s3_path = os.path.join(s3_path, file)
+            s3_file_path = os.path.join(s3_path, file)
         
             try:
                 # Upload to S3
-                s3.upload_file(local_path, S3_BUCKET_NAME, s3_path)
+                s3.upload_file(local_path, S3_BUCKET_NAME, s3_file_path)
                 print(f"Uploaded file from {local_path} to s3://{S3_BUCKET_NAME}/{s3_path}")
             except ClientError as e:
                 print(f"Error uploading to S3: {e}")
