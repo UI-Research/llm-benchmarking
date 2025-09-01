@@ -72,41 +72,44 @@ def get_user_queries_with_context(q_type, embedding_vs, k):
 
     # Define columns
     queries['query_w_context'] = None
-    queries['context_docs'] = None
     queries['context_metadata'] = None
 
+    for i in range(k):
+        queries[f'context_doc_{i+1}'] = None
+
+    # For each query
     for idx, row in queries.iterrows():
 
-        # Retrieve context from the vector store based on the user query
-        context_docs, context_metadata = get_context_metadata(embedding_vs, row['question'], k)
+        # Retrieve top-k context from the vector store based on the user query
+        top_k_context = get_top_k_context_metadata(embedding_vs, row['question'], k)
        
         # Combine question and context to create user message
-        queries.at[idx, 'query_w_context'] = f"Question: {row['question']} \nContext:\n {context_docs}"
-        queries.at[idx, 'context_docs'] = context_docs
+        context_docs = ""
+        context_metadata = {}
+        
+        for i, doc in enumerate(top_k_context):
+            # Combine retrieved context
+            context_docs += f"Context {i+1}: {doc.page_content} \n"
+            # Collect context metadata
+            context_metadata[f"Context {i+1}"] = doc.metadata
+            # Add individual context doc to a column
+            queries.at[idx, f'context_doc_{i+1}'] = doc.page_content.strip()
+        
+        queries.at[idx, 'query_w_context'] = f"Question: {row['question']} \nContext:\n\n {context_docs}"
         queries.at[idx, 'context_metadata'] = context_metadata
 
     return queries
 
 
-def get_context_metadata(emb_vs, query, k):
+def get_top_k_context_metadata(emb_vs, query, k):
 
     # Retrieve context from the vector store based on the user query
     top_k_context = emb_vs.similarity_search(query, k)
-    
-    context_docs = ""
-    context_metadata = {}
-    
-    for i, doc in enumerate(top_k_context):
-        # Combine retrieved context
-        context_docs = context_docs + f"Context {i+1}: {doc.page_content} \n"
 
-        # Collect context metadata
-        context_metadata[f"Context {i+1}"] = doc.metadata
-
-    return (context_docs, context_metadata)
+    return top_k_context
     
 
-def run_conversation(model, q_type, emb_vs, folder_path, k=3, n_iter=3):
+def run_conversation(model, q_type, emb_name, emb_vs, folder_path, k=3, n_iter=3):
     
     # Connect to Bedrock runtime
     try:
@@ -131,6 +134,7 @@ def run_conversation(model, q_type, emb_vs, folder_path, k=3, n_iter=3):
     # Define columns 
     queries['model'] = model
     queries['execution_date'] = datetime.date.today()
+    queries['embedding_model'] = emb_name
     
     # Set up system prompt
     system_prompt = [{"text": SYSTEM_PROMPT}]
@@ -176,7 +180,8 @@ def run_conversation(model, q_type, emb_vs, folder_path, k=3, n_iter=3):
         # Store copy of current iteration results
         all_iterations = pd.concat([all_iterations, queries.copy()], ignore_index=True)
 
-    file_path = folder_path / f"output_{q_type}.csv"
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    file_path = folder_path / f"output_{q_type}_{current_date}.csv"
     all_iterations.to_csv(file_path)
 
 
