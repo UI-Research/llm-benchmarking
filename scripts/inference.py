@@ -180,7 +180,7 @@ def run_conversation(model, q_type, emb_name, emb_vs, folder_path, k=3, n_iter=3
         # Store copy of current iteration results
         all_iterations = pd.concat([all_iterations, queries.copy()], ignore_index=True)
 
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    current_date = datetime.date.today().strftime("%Y-%m-%d")
     file_path = folder_path / f"output_{q_type}_{current_date}.csv"
     all_iterations.to_csv(file_path)
 

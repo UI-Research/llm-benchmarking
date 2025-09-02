@@ -6,6 +6,7 @@
 import boto3
 import pandas as pd
 import io
+import datetime
 
 bucket = "local-gov-ai-llm-benchmarking"
 prefix = "output/"
@@ -38,10 +39,11 @@ combined_df = pd.concat(dfs, ignore_index=True)
 combined_df = combined_df.loc[:, ~combined_df.columns.str.startswith("Unnamed")]
 
 # Export back to S3
+current_date = datetime.date.today().strftime("%Y-%m-%d")
 combined_csv_buffer = io.StringIO()
 combined_df.to_csv(combined_csv_buffer, index=False)
 s3.put_object(
     Bucket=bucket,
-    Key="output/all_output_combined.csv",
+    Key=f"output/all_output_combined_{current_date}.csv",
     Body=combined_csv_buffer.getvalue()
 )
