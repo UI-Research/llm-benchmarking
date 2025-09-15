@@ -56,7 +56,7 @@ def generate_conversation(bedrock_client, model_id, messages, system_prompt):
 def get_queries(q_type):
 
     # Read file containing all zoning related queries
-    file_path = Path.cwd().parent / "temp" / "zoning-code-questions.csv"
+    file_path = Path.cwd().parent / "temp" / "zoning-code-questions-updated.csv"
     all_queries = pd.read_csv(file_path)
 
     # Filter queries for relevant question type
