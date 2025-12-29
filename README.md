@@ -1,5 +1,36 @@
 # llm-benchmarking
 
+## To get started
+
+1. Clone this repository to your local machine using.
+
+2. Create and activate a virtual environment.
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+3. Install the required packages.
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4. Install `poppler utils` for Unstructured data partitioning:
+    ```bash
+    sudo apt update
+
+    sudo apt-get update
+
+    sudo apt-get install -y poppler-utils
+
+    sudo apt-get install tesseract-ocr
+    ```
+
+5. To access AWS Bedrock models, set up your AWS credentials. You can do this by configuring the AWS CLI or setting environment variables. For more information, refer to the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
+
+
+## Archive of Previous Versions
+
 ## License Agreements
 
 To access the Llama 4 family of models through Hugging Face, 
