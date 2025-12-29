@@ -13,8 +13,8 @@ if __name__ == "__main__":
     emb.download_from_s3(s3_path="Minneapolis_MN_Code_of_Ordinances.pdf", output_path=local_file_dir)
     
     # Define document chunk size and overlap
-    chunk_size_value = 2000
-    chunk_overlap = 300
+    chunk_size_value = 2500
+    chunk_overlap = 500
     
     # HuggingFace embedding models
     embedding_models = ["intfloat/multilingual-e5-large-instruct", "intfloat/e5-small-v2"]

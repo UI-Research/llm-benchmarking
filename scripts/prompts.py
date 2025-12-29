@@ -24,7 +24,7 @@ Context:
 Answer:
 """
 
-# Prompt template for Langchain QA retrieval chain
+#Prompt template for Langchain QA retrieval chain
 PROMPT = PromptTemplate.from_template(
-    template = SYSTEM_PROMPT
+  template = SYSTEM_PROMPT
 )

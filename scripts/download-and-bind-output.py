@@ -9,7 +9,7 @@ import io
 import datetime
 
 bucket = "local-gov-ai-llm-benchmarking"
-prefix = "output/"
+prefix = "output/mistral-ai-pixtral"
 s3 = boto3.client("s3")
 
 # List all CSV files under the output/ folder (including subfolders)
@@ -29,9 +29,10 @@ while True:
 # Download and concatenate all CSVs
 dfs = []
 for key in csv_keys:
-    obj = s3.get_object(Bucket=bucket, Key=key)
-    df = pd.read_csv(io.BytesIO(obj["Body"].read()))
-    dfs.append(df)
+    if "2025-11-21" in key:
+        obj = s3.get_object(Bucket=bucket, Key=key)
+        df = pd.read_csv(io.BytesIO(obj["Body"].read()))
+        dfs.append(df)
 
 # Concatenate rowwise
 combined_df = pd.concat(dfs, ignore_index=True)
@@ -44,6 +45,6 @@ combined_csv_buffer = io.StringIO()
 combined_df.to_csv(combined_csv_buffer, index=False)
 s3.put_object(
     Bucket=bucket,
-    Key=f"output/all_output_combined_{current_date}.csv",
+    Key=f"output/all_output_combined_{current_date}_mistral-ai-pixtral.csv",
     Body=combined_csv_buffer.getvalue()
 )
