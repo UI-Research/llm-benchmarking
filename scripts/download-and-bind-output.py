@@ -9,7 +9,7 @@ import io
 import datetime
 
 bucket = "local-gov-ai-llm-benchmarking"
-prefix = "output/mistral-ai-pixtral"
+prefix = "output/mistral-ai-pixtral" # Update this to the correct prefix for a model's output folder
 s3 = boto3.client("s3")
 
 # List all CSV files under the output/ folder (including subfolders)
@@ -29,6 +29,7 @@ while True:
 # Download and concatenate all CSVs
 dfs = []
 for key in csv_keys:
+    # Filter for files that contain file identifier such as a date in their name
     if "2025-11-21" in key:
         obj = s3.get_object(Bucket=bucket, Key=key)
         df = pd.read_csv(io.BytesIO(obj["Body"].read()))
@@ -45,6 +46,7 @@ combined_csv_buffer = io.StringIO()
 combined_df.to_csv(combined_csv_buffer, index=False)
 s3.put_object(
     Bucket=bucket,
-    Key=f"output/all_output_combined_{current_date}_mistral-ai-pixtral.csv",
+    # Use a key that indicates this is the combined output for a model and includes the current date for versioning
+    Key=f"output/all_output_combined_{current_date}_mistral-ai-pixtral.csv", 
     Body=combined_csv_buffer.getvalue()
 )

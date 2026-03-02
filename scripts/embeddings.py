@@ -108,6 +108,17 @@ def generate_embeddings_and_store(rag_file_path,
                                   splitter_type='recursive', 
                                   chunk_size=2000, 
                                   chunk_overlap=300):
+    """
+    Generates embeddings for a given PDF document and stores them in a FAISS vector store on S3.
+
+    Args:
+        rag_file_path (str): The file path of the PDF document to process.
+        local_dir (str): The local directory to save the vector store before uploading to S3.
+        model (str): The HuggingFace model name to use for generating embeddings.
+        splitter_type (str): The type of text splitter to use ('recursive', 'unstruct_basic', 'unstruct_by_title').
+        chunk_size (int): The maximum size of each text chunk.
+        chunk_overlap (int): The number of overlapping characters between chunks (only applicable for 'recursive' and 'unstruct_basic' splitters).
+    """
 
     # Partition the PDF document based on the specified splitter type
     with tqdm(total=1, desc = f"Splitting documents with {splitter_type} splitter") as pbar:
@@ -147,6 +158,13 @@ def generate_embeddings_and_store(rag_file_path,
 
 
 def upload_to_s3(local_folder, s3_path):
+    """
+    Uploads a local folder to S3.
+
+    Args:
+    local_folder (str): The local folder path to upload.
+    s3_path (str): The S3 path to upload to.
+    """
     
     try:
         s3 = boto3.client('s3')
@@ -171,6 +189,10 @@ def upload_to_s3(local_folder, s3_path):
 def load_embedding_vector_store(model, splitter_type):
     """
     Load the FAISS embedding vector store from S3.
+
+    Args:
+        model (str): The HuggingFace embedding model name.    
+        splitter_type (str): The splitter type.
     
     Returns:
         FAISS: The loaded vector store.
@@ -214,7 +236,18 @@ def load_embedding_vector_store(model, splitter_type):
                             get_huggingface_embedding_model(model), 
                             allow_dangerous_deserialization=True)
 
+
 def get_local_dir(model, splitter_type):
+    """
+    Get the local directory for the vector store.
+
+    Args:
+        model (str): The model name.
+        splitter_type (str): The splitter type.
+
+    Returns:
+        tuple: A tuple containing the local path and a boolean indicating if the directory exists.
+    """
 
     # Create local path to save vector store 
     try:
@@ -233,8 +266,15 @@ def get_local_dir(model, splitter_type):
         local_path.mkdir(parents=True, exist_ok=True)
         return (local_path, False)
 
-def download_from_s3(s3_path, output_path):
 
+def download_from_s3(s3_path, output_path):
+    """
+    Download a file from S3 to a local directory.
+
+    Args:
+        s3_path (str): The S3 path of the file.
+        output_path (str): The local directory to save the file.
+    """
     # Extract file name
     file_name = os.path.basename(s3_path)
 
