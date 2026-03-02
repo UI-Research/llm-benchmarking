@@ -1,6 +1,3 @@
-from langchain.prompts import PromptTemplate
-from langchain.output_parsers import RegexParser
-
 # System prompt for AWS Converse API
 SYSTEM_PROMPT = """
 Context: You are an AI assistant who has access to the zoning code of an area and you use that information to answer questions about zoning. 
@@ -23,8 +20,3 @@ Context:
 
 Answer:
 """
-
-#Prompt template for Langchain QA retrieval chain
-PROMPT = PromptTemplate.from_template(
-  template = SYSTEM_PROMPT
-)

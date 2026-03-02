@@ -1,7 +1,5 @@
 import embeddings as emb
-import boto3
 from pathlib import Path
-from tqdm import tqdm
 
 if __name__ == "__main__":
     
