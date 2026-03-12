@@ -53,10 +53,16 @@ cd llm-benchmarking
 
 ### 2. Create and activate a virtual environment
 
+> **Windows users:** This codebase was developed and tested on Linux. While it can be run on Windows, we recommend using **Python 3.12** for the best compatibility with the listed dependencies. Some packages (e.g. NVIDIA CUDA libraries) are not optimized for Windows and will be skipped automatically during installation.
+
 ```bash
 python3 -m venv env
 source env/bin/activate          # macOS/Linux
-env\Scripts\Activate.ps1         # Windows (PowerShell)
+```
+
+```bash
+py -3.12 -m venv env            # Windows (PowerShell)
+env\Scripts\Activate.ps1         
 ```
 
 ### 3. Install Python dependencies
@@ -77,6 +83,15 @@ sudo apt-get install -y poppler-utils tesseract-ocr
 > On macOS, use `brew install poppler tesseract` instead.
 
 ### 5. Configure AWS credentials
+
+If you don't have the AWS CLI installed, download and install it first by following the instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+
+For example, on **macOS**: 
+```bash
+  brew install awscli
+```
+
+Then configure your credentials:
 
 ```bash
 aws configure

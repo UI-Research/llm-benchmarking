@@ -59,9 +59,9 @@ def generate_conversation(bedrock_client, model_id, messages, system_prompt):
             messages=messages,
             system=system_prompt
         )
-    except ClientError as e:
+    except Exception as e:
         print(f"Error invoking Converse API: {e}")
-        return
+        raise
 
     return response
 
@@ -309,7 +309,6 @@ def rag_with_openai(model_id, q_type, emb_name, emb_vs, folder_path, k=6, n_iter
         # Clear response and update iteration for current run
         queries['iteration'] = i+1
         queries['response'] = None
-        queries['reasoning'] = None
 
         print(f"Conversation iteration {i+1}")
         # Clear messages for current iteration
