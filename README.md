@@ -4,6 +4,8 @@
 
 A pipeline for benchmarking large language models (LLMs) on municipal zoning code question-answering using Retrieval-Augmented Generation (RAG). The pipeline generates document embeddings from a zoning code PDF, stores them in FAISS vector stores on AWS S3, and runs multi-turn conversations against AWS Bedrock models (e.g. Meta Llama, Mistral Pixtral) and OpenAI models (e.g. GPT). Outputs are saved to S3 as CSV files for analysis.
 
+In this pipeline, we opted to test open-source vector storage and several open-weight models while leveraging Urban Institute's existing AWS infrastructure expertise. Alternative approaches range from fully open-source stacks (e.g., Ollama for local inference) to fully managed proprietary services (e.g., OpenAI), each with different tradeoffs in cost, control, and ease of use. For our purposes, we prioritized open-source tools to maximize reproducibility and control over the pipeline.
+
 ---
 
 ## Project Structure
