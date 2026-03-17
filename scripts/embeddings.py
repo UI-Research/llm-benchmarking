@@ -24,7 +24,7 @@ def recursive_splitter(file_path, chunk_size=2000, chunk_overlap=300):
     loader = PyPDFLoader(file_path)
     documents = loader.load()
     
-    # Split the documents into chunks using recusrive splitting
+    # Split the documents into chunks using recursive splitting
     text_splitter = RecursiveCharacterTextSplitter(
                                                     chunk_size=chunk_size, 
                                                     chunk_overlap=chunk_overlap,
@@ -227,7 +227,7 @@ def load_embedding_vector_store(model, splitter_type):
             
             try:
                 s3.download_file(S3_BUCKET_NAME, key, f"{local_path}/{file_name}")
-                print(f"Saved file from s3://{S3_BUCKET_NAME}/key at {local_path}/{file_name}.")
+                print(f"Saved file from s3://{S3_BUCKET_NAME}/{key} at {local_path}/{file_name}.")
             except ClientError as e:
                 print(f"Error downloading from S3: {e}")
                 return 
